@@ -10,3 +10,10 @@ class Note(Base):
     title = Column(String)
     content = Column(String)
     tags = Column(JSON)
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    email = Column(String, unique=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
