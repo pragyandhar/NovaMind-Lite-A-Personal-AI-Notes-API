@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 # ------------------------------
+from app.exceptions import UserAlreadyExistsException
 from app.schemas.user import UserCreate, UserResponse, Token
 from app.dependencies import get_db
 from app.models.database import User
@@ -13,14 +14,14 @@ router = APIRouter(
     tags=["Auth"]
 )
 
+def send_welcome_message(email: str):
+    print(f"Welcome to {email} NovaLite: Notes API")
+
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def register_user(user: UserCreate, db: Session = Depends(get_db)):
+def register_user(user: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     email_check = db.query(User).filter(user.email == User.email).first()
     if email_check:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="The User Already Exists"
-        )
+        raise UserAlreadyExistsException(user.email)
     
     hpass = hash_password(user.password)
     new_user = User(email=user.email, hashed_password=hpass)
@@ -28,6 +29,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
+    background_tasks.add_task(send_welcome_message, user.email)
     return UserResponse.model_validate(new_user)
 
 @router.post("/login", response_model=Token)
