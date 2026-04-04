@@ -1,10 +1,11 @@
+from app.exceptions import NoteNotFoundException
 from app.schemas.note import NoteCreate, NoteResponse
 from app.dependencies import get_db, get_current_user
 from app.models.database import Note, User
 # -------------------------------------
 from sqlalchemy.orm import Session
 from fastapi import Depends
-from fastapi import APIRouter, status, HTTPException
+from fastapi import APIRouter, status
 # -------------------------------------
 
 
@@ -25,15 +26,12 @@ def get_notes(db: Session = Depends(get_db), current_user: User = Depends(get_cu
 def get_notes_by_id(note_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     note = db.query(Note).filter(Note.id == note_id).first()
     if not note:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Note Was Not Found"
-        )
+        raise NoteNotFoundException(note_id)
     return note
 
 
 # Create a note, return 201
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=NoteResponse)
+@router.post("/create_note", status_code=status.HTTP_201_CREATED, response_model=NoteResponse)
 def create_note(note: NoteCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     new_note = Note(title=note.title, content=note.content, tags=note.tags)
     db.add(new_note)
@@ -47,9 +45,6 @@ def create_note(note: NoteCreate, db: Session = Depends(get_db), current_user: U
 def delete_note(note_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     note = db.query(Note).filter(Note.id == note_id).first()
     if not note:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Note Was Not Found"
-        )
+        raise NoteNotFoundException(note_id)
     db.delete(note)
     db.commit()
