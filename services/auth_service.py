@@ -16,10 +16,10 @@ import jwt
 from fastapi import HTTPException, status
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
-import os
+from app.config import settings
 
 load_dotenv()
-SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+SECRET_KEY = settings.jwt_secret_key
 ALGORITHM = "HS256"
 
 def create_access_token(data: dict):
