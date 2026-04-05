@@ -5,11 +5,14 @@ from app.routers.auth import router as auth_router
 from app.db.session import Base, engine
 # ------------------------------------------------------
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
+from starlette.middleware.base import BaseHTTPMiddleware
 # ------------------------------------------------------
-
+import time
+# ------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Novamind is starting")
@@ -19,6 +22,24 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="NovaMind Lite", version="0.1.0", lifespan=lifespan)
+
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        start = time.time()
+        response = await call_next(request)
+        duration = (time.time() - start) * 1000
+        print(f"{request.method} {request.url.path} - {response.status_code} - {duration:.3f}s")
+        return response
+    
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=['http://localhost:3000', 'http://localhost:5173'],
+    allow_credentials=True,
+    allow_methods=['*'],
+    allow_headers=['*']
+)
+app.add_middleware(RequestLoggingMiddleware)
+
 
 app.include_router(notes_router)
 app.include_router(ai_router)
@@ -46,7 +67,7 @@ async def pydantic_validation_handler(req: Request, exc: RequestValidationError)
     )
 
 @app.exception_handler(Exception)
-async def global_exception_handler(req: Request, exc: Exception):
+async def general_exception_handler(req: Request, exc: Exception):
     return JSONResponse(
         status_code=500,
         content={"error": "Internal server error"}
