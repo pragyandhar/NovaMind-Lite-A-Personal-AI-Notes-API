@@ -1,8 +1,8 @@
 from groq import AsyncGroq
 # -------------------------
-import os
+from app.config import settings
 #--------------------------
-client = AsyncGroq(api_key=os.getenv("GROQ_API_KEY"))
+client = AsyncGroq(api_key=settings.groq_api_key)
 
 async def summarize_note(title: str, content: str):
     response = await client.chat.completions.create(
